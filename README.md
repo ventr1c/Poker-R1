@@ -574,3 +574,4 @@ sbatch slurm/generate.slurm \
 ## Contributing
 
 Contributions are welcome. Please refer to https://github.com/huggingface/open-r1/issues/23.
+# Texas-R1
