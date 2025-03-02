@@ -1,0 +1,54 @@
+# Model arguments
+model_name_or_path: deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
+model_revision: main
+torch_dtype: bfloat16
+attn_implementation: flash_attention_2
+
+# Data training arguments
+dataset_name: RZ412/PokerBench # Change to your username
+dataset_configs:
+- default
+system_prompt: "You are a helpful AI Assistant that provides expert poker analysis. First think about the reasoning process as an internal monologue, then provide the optimal GTO decision. Respond in the following format:\n<think>\n[Your step-by-step reasoning about the hand, considering position, odds, ranges, etc.]\n</think>\n<answer>\n[Your final decision in the format: check/call/fold/bet X/raise X]\n</answer>"
+
+# GRPO trainer config
+bf16: true
+use_vllm: true
+vllm_device: auto
+vllm_gpu_memory_utilization: 0.95
+do_eval: false暂时没管raise多少
+gradient_accumulation_steps: 8
+gradient_checkpointing: true
+gradient_checkpointing_kwargs:
+  use_reentrant: false
+learning_rate: 5.0e-07
+lr_scheduler_type: cosine
+max_length: 4096
+max_prompt_length: 2048
+max_steps: -1
+num_train_epochs: 3
+num_generations: 8
+output_dir: data/DeepSeek-R1-Distill-Qwen-7B-Poker-GRPO
+overwrite_output_dir: true
+per_device_eval_batch_size: 8
+per_device_train_batch_size: 8
+push_to_hub: true
+report_to:
+- wandb
+# Trainer arguments
+reward_funcs:
+- poker_gto
+- poker_format
+- tag_count
+reward_weights:
+- 1.0
+- 0.5
+- 0.5
+save_strategy: "epoch"
+save_total_limit: 1
+seed: 42
+temperature: 0.7
+warmup_ratio: 0.1 
+
+# Add these parameters to your config
+max_model_len: 65536  # Reduced from default 131072
+vllm_max_model_len: 65536  # Explicitly set for vLLM

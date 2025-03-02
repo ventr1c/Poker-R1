@@ -1,0 +1,6 @@
+#!/home/ubuntu/quic-efs/user/minhua/project-poker/open-r1/env_poker/bin/python
+
+from deepspeed.nvme import ds_io_main
+
+if __name__ == '__main__':
+    ds_io_main()

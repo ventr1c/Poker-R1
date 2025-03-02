@@ -17,6 +17,11 @@ import os
 import sys
 from dataclasses import dataclass, field
 
+# Add the src directory to the Python path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
+
+
+
 import datasets
 import torch
 import transformers
@@ -35,6 +40,8 @@ from open_r1.rewards import (
     len_reward,
     reasoning_steps_reward,
     tag_count_reward,
+    poker_gto_reward,
+    poker_format_reward,
 )
 from open_r1.utils import get_tokenizer
 from open_r1.utils.callbacks import get_callbacks
@@ -68,7 +75,7 @@ class GRPOScriptArguments(ScriptArguments):
     """
 
     reward_funcs: list[str] = field(
-        default_factory=lambda: ["accuracy", "format", "tag_count"],
+        default_factory=lambda: ["accuracy", "format", "tag_count", "poker_gto"],
         metadata={
             "help": "List of reward functions. Possible values: 'accuracy', 'format', 'format_deepseek', 'reasoning_steps', 'cosine', 'repetition_penalty', 'length', tag_count', 'code', 'code_format'"
         },
@@ -176,6 +183,8 @@ def main(script_args, training_args, model_args):
         "code": code_reward,
         "code_format": get_code_format_reward(language=script_args.code_language),
         "tag_count": tag_count_reward,
+        "poker_gto": poker_gto_reward,
+        "poker_format": poker_format_reward,
     }
     reward_funcs = [REWARD_FUNCS_REGISTRY[func] for func in script_args.reward_funcs]
 
@@ -186,8 +195,14 @@ def main(script_args, training_args, model_args):
         if training_args.system_prompt is not None:
             prompt.append({"role": "system", "content": training_args.system_prompt})
 
-        prompt.append({"role": "user", "content": example["problem"]})
-        return {"prompt": prompt}
+        # Use the 'instruction' field from PokerBench dataset
+        prompt.append({"role": "user", "content": example["instruction"]})
+        
+        # Store the GTO decision (output) for the reward function
+        return {
+            "prompt": prompt,
+            "solution": example["output"]  # GTO decision from PokerBench
+        }
 
     dataset = dataset.map(make_conversation)
 

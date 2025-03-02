@@ -400,3 +400,108 @@ def get_code_format_reward(language: str = "python"):
         return [1.0 if match else 0.0 for match in matches]
 
     return code_format_reward
+
+
+# Add the following function to the existing rewards.py file
+
+def poker_gto_reward(completions, solution, **kwargs):
+    """Reward function that checks if the model's poker decision matches the GTO decision.
+    
+    Args:
+        completions: List of model completions (each containing a list of message dictionaries)
+        solution: List of ground truth GTO decisions
+        
+    Returns:
+        List of rewards where 1.0 means the model's decision matches the GTO decision
+    """
+    contents = [completion[0]["content"] for completion in completions]
+    rewards = []
+    
+    for content, gto_decision in zip(contents, solution):
+        try:
+            # Extract the decision from the response (assuming it's in the <answer> section)
+            answer_pattern = r"<answer>\n(.*?)\n</answer>"
+            answer_match = re.search(answer_pattern, content, re.DOTALL)
+            
+            if not answer_match:
+                rewards.append(0.0)
+                continue
+                
+            answer_section = answer_match.group(1).strip().lower()
+            
+            # Normalize the model's answer and the reference for comparison
+            normalized_response = _normalize_poker_decision(answer_section)
+            normalized_reference = _normalize_poker_decision(gto_decision.lower())
+            
+            # Check if the decisions match
+            reward = 1.0 if normalized_response == normalized_reference else 0.0
+            
+        except (IndexError, ValueError, AttributeError) as e:
+            # If we can't parse the answer section properly, return 0
+            print(f"Error in poker_gto_reward: {e}")
+            reward = 0.0
+            
+        rewards.append(reward)
+        
+    return rewards
+
+
+def _normalize_poker_decision(decision):
+    """Normalize poker decisions for comparison.
+    
+    For example, "raise 3bb" and "raise 3 bb" should be considered the same.
+    This needs to be adapted based on the exact format in the PokerBench dataset.
+    """
+    # Remove extra whitespace and standardize common terms
+    decision = decision.strip()
+    decision = decision.replace(" bb", "bb")
+    decision = decision.replace(" big blinds", "bb")
+    
+    # Handle common action formats
+    if "fold" in decision:
+        return "fold"
+    elif "check" in decision:
+        return "check"
+    elif "call" in decision:
+        return "call"
+    
+    # Handle raises with sizing
+    if "raise" in decision or "bet" in decision:
+        # Extract the action and size if present
+        sizing_match = re.search(r'(raise|bet)\s*([\d.]+)\s*bb', decision)
+        if sizing_match:
+            action = sizing_match.group(1)
+            size = sizing_match.group(2)
+            return f"{action} {size}bb"
+    
+    # Return as-is if no normalization rules match
+    return decision
+
+def poker_format_reward(completions, **kwargs):
+    """
+    Reward function that checks if:
+    1. The reasoning process is enclosed within <think> and </think> tags
+    2. The final answer is enclosed within <answer> and </answer> tags
+    3. The answer contains a properly formatted poker decision
+    """
+    # Check basic think/answer structure
+    structure_pattern = r"^<think>\n.*?\n</think>\n<answer>\n.*?\n</answer>$"
+    
+    # Check that the answer contains a properly formatted poker decision
+    poker_answer_pattern = r"<answer>\n(check|call|fold|bet\s+\d+(\.\d+)?|raise\s+\d+(\.\d+)?)\n</answer>$"
+    
+    completion_contents = [completion[0]["content"] for completion in completions]
+    
+    rewards = []
+    for content in completion_contents:
+        # First check overall structure
+        structure_match = re.match(structure_pattern, content, re.DOTALL | re.MULTILINE)
+        if not structure_match:
+            rewards.append(0.0)
+            continue
+            
+        # Then check answer format
+        poker_match = re.search(poker_answer_pattern, content, re.DOTALL | re.MULTILINE)
+        rewards.append(1.0 if poker_match else 0.0)
+        
+    return rewards
