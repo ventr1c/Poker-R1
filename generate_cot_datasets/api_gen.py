@@ -172,7 +172,7 @@ For example, you can say things like:
         requests = []
 
         for _ in range(num_requests):
-            task_text = self.countdown.get_task(return_raw=True)['query'][0]
+            task_text = self.countdown.get_task(return_raw=True)['query']
             custom_id = str(uuid.uuid4())
 
             request = Request(
