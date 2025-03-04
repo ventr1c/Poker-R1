@@ -1,8 +1,12 @@
 import re
 import itertools
 import random
+import sys
+import pathlib
 from typing import Dict
 from tqdm import tqdm
+
+sys.path.insert(0, str(pathlib.Path().resolve()))
 
 def get_existing_problems():
     existing_problems = set()
