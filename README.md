@@ -69,6 +69,10 @@ We convert the all strategies dataset to only have incorrect examples.
 python generate_cot_datasets/generate_no_positive_cot.py --input_file {input_file} --output_file {output_file}
 ```
 
+## Training
+All our experiments are run on either 8 or 4, 80GB A100s or H100s.
+The number of GPUs can be changed in the script. Please see the TinyZero repo or VERL for more information on training with different compute.
+
 ## Run SFT
 We run SFT on the priming data to get a new primed base model.
 ```
@@ -111,5 +115,13 @@ We then run SFT on the new dataset to get a new primed base model and run PPO on
 
 ## Citation
 ```
-
+@misc{gandhi2025cognitivebehaviorsenableselfimproving,
+      title={Cognitive Behaviors that Enable Self-Improving Reasoners, or, Four Habits of Highly Effective STaRs}, 
+      author={Kanishk Gandhi and Ayush Chakravarthy and Anikait Singh and Nathan Lile and Noah D. Goodman},
+      year={2025},
+      eprint={2503.01307},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2503.01307}, 
+}
 ```
