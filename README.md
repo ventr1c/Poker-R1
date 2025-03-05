@@ -1,8 +1,6 @@
 <div align="center">
   <h1 style="border-bottom: none;">Cognitive Behaviors that Enable Self-Improving Reasoners,</h1>
   <h2 style="border-top: none;"><em>or,</em> Four Habits of Highly Effective STaRs</h2>
-<span>License <a href="https://opensource.org/licenses/Apache-2.0">Apache 2.0</a></span>
-<span>arXiv <a href="https://arxiv.org/abs/2503.01307">2503.01307</a></span>
 </div>
 
 <p align="center">
