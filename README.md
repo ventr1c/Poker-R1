@@ -1,5 +1,5 @@
-<h1 align="center">Cognitive Behaviors that Enable Self-Improving Reasoners,</h1>
-<h2 align="center"><em>or,</em> Four Habits of Highly Effective STaRs</h2>
+<p align="center">Cognitive Behaviors that Enable Self-Improving Reasoners,</p>
+<p align="center"><em>or,</em> Four Habits of Highly Effective STaRs</p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/License-Apache 2.0-green" alt="License">
