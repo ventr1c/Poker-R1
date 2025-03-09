@@ -47,7 +47,7 @@ class GRPOConfig(trl.GRPOConfig):
         metadata={"help": ("The entity to store runs under.")},
     )
     wandb_project: Optional[str] = field(
-        default=None,
+        default='Poker-R1',
         metadata={"help": ("The project to store runs under.")},
     )
 

@@ -26,11 +26,12 @@ import datasets
 import torch
 import transformers
 from datasets import load_dataset
+from datasets import load_from_disk
 from transformers import set_seed
 from transformers.trainer_utils import get_last_checkpoint
 
-from open_r1.configs import GRPOConfig
-from open_r1.rewards import (
+from src.open_r1.configs import GRPOConfig
+from src.open_r1.rewards import (
     accuracy_reward,
     code_reward,
     format_reward,
@@ -42,14 +43,18 @@ from open_r1.rewards import (
     tag_count_reward,
     poker_gto_reward,
     poker_format_reward,
+    poker_tag_count_reward,
 )
-from open_r1.utils import get_tokenizer
-from open_r1.utils.callbacks import get_callbacks
-from open_r1.utils.wandb_logging import init_wandb_training
+from src.open_r1.utils import get_tokenizer
+from src.open_r1.utils.callbacks import get_callbacks
+from src.open_r1.utils.wandb_logging import init_wandb_training
 from trl import GRPOTrainer, ModelConfig, ScriptArguments, TrlParser, get_peft_config
-
+import wandb
+from huggingface_hub import login
+from transformers import TrainerCallback
 
 logger = logging.getLogger(__name__)
+
 
 
 @dataclass
@@ -118,6 +123,8 @@ class GRPOScriptArguments(ScriptArguments):
 
 
 def main(script_args, training_args, model_args):
+    wandb.login(key="0d8f933b09d18ee04b36efb4c4858e545568f092")
+    # login(token="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", add_to_git_credential=True)
     # Set seed for reproducibility
     set_seed(training_args.seed)
 
@@ -156,7 +163,11 @@ def main(script_args, training_args, model_args):
         init_wandb_training(training_args)
 
     # Load the dataset
-    dataset = load_dataset(script_args.dataset_name, name=script_args.dataset_config)
+    # dataset = load_dataset(script_args.dataset_name, name=script_args.dataset_config)
+    # dataset_path = os.path.abspath("/workdir/saved-datasets/"+script_args.dataset_name)
+    dataset_path = script_args.dataset_name
+    logger.info(f"Loading dataset from local path: {dataset_path}")
+    dataset = load_from_disk(dataset_path)
 
     ################
     # Load tokenizer
@@ -185,6 +196,7 @@ def main(script_args, training_args, model_args):
         "tag_count": tag_count_reward,
         "poker_gto": poker_gto_reward,
         "poker_format": poker_format_reward,
+        "poker_tag_count": poker_tag_count_reward,
     }
     reward_funcs = [REWARD_FUNCS_REGISTRY[func] for func in script_args.reward_funcs]
 
@@ -222,7 +234,7 @@ def main(script_args, training_args, model_args):
         use_cache=False if training_args.gradient_checkpointing else True,
     )
     training_args.model_init_kwargs = model_kwargs
-
+  
     #############################
     # Initialize the GRPO trainer
     #############################
@@ -234,6 +246,7 @@ def main(script_args, training_args, model_args):
         eval_dataset=dataset[script_args.dataset_test_split] if training_args.eval_strategy != "no" else None,
         peft_config=get_peft_config(model_args),
         callbacks=get_callbacks(training_args, model_args),
+        # callbacks=callbacks,
         processing_class=tokenizer,
     )
 
