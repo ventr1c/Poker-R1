@@ -25,7 +25,7 @@ if __name__ == '__main__':
         # Get action from LLM
         bet = llm_player.decide_action(game_state)
 
-        # 执行LLM决策
+        # TODO
         obs, rewards, done = dealer.step(bet)
         if all(done):
             break
