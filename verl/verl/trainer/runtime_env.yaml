@@ -1,0 +1,11 @@
+working_dir: ./
+excludes: ["/.git/"]
+env_vars:
+  TORCH_NCCL_AVOID_RECORD_STREAMS: "1"
+  VLLM_ATTENTION_BACKEND: "XFORMERS"
+  PYTHONPATH: "/workdir/project-search/rl4search/verl:${PYTHONPATH}"
+py_modules:
+  - /workdir/project-search/rl4search/verl
+setup_commands:
+  - echo 'import sys; sys.path.insert(0, "/workdir/project-search/rl4search/verl")' > /tmp/ray_init_hook.py
+  - export RAY_WORKER_HOOK_FILENAME=/tmp/ray_init_hook.py
