@@ -12,12 +12,12 @@ import random
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--local_dir', default='./data/pokerbench-instruct')
+    parser.add_argument('--local_dir', default='./data/pokerbench-plan')
     parser.add_argument('--hdfs_dir', default=None)
     parser.add_argument('--input_path', default='/workdir/saved-datasets/PokerBench-Parquet')
     parser.add_argument('--train_size', type=int, default=None)
     parser.add_argument('--test_size', type=int, default=None)
-    parser.add_argument('--template_type', type=str, default='qwen-instruct')
+    parser.add_argument('--template_type', type=str, default='plan')
 
     args = parser.parse_args()
 
@@ -59,47 +59,60 @@ if __name__ == '__main__':
     print(f"Training set size: {len(train_dataset)}")
     print(f"Test set size: {len(test_dataset)}")
 
-    def make_prefix(instruction, template_type):
-        """Create the appropriate prefix based on template type."""
-        if template_type == 'base':
-            """This works for any base model"""
-            prefix = f"""You are a helpful AI Assistant that provides expert poker analysis. First think about the reasoning process as an internal monologue, then provide the optimal GTO decision. Respond in the following format:\n<think>\n[Your step-by-step reasoning process. ]\n</think>\n<answer>\n[Your final decision in the format: check/call/fold/bet X/raise X]\n</answer>. {instruction}"""
-        elif template_type == 'plan_guided':
-            prefix = f"""You are a helpful AI Assistant that provides expert poker analysis. 
-                        Your task is to analyze the poker situation and determine the optimal GTO decision. 
-                        1. First, conduct a step-by-step reasoning phase within <analyze> and </analyze> tags where you analyze the current game situation (e.g., board texture, positions, stack sizes, etc.). 
-                        2. Next, enter a planning phase inside <plan> and </plan> where you explore multiple potential strategies. During this phase, list possible actions without committing to a single decision. Highlight any uncertainties or multiple viable options. 
-                        3. If you require further knowledge to refine your planning, call a game theory calculation function inside <calculation> and </calculation>. These calculations can include, but are not limited to: - Range estimation for you and your opponents. - Detailed estimations of hand strengths. - Expected value calculations for different actions. - Mixed strategy considerations (since GTO may require playing the same hand in different ways with specific frequencies). - Application of the 4-2 Rule. 
-                        4. You may call the <calculation> function multiple times. After each calculation, return to the planning phase (<plan> ... </plan>) to reassess your options—either confirming your earlier considerations or revising them based on new insights. 
-                        5. Only once your iterative planning and calculation process has fully refined your decision should you provide your final action. 
-                        Output your final decision in the following format: <answer> [Your final decision in the format: check/call/fold/bet X/raise X] </answer>. For bet or raise decisions, ensure that X is the only numerical value in your output, for example, <answer> raise 10 </answer> or <answer> bet 100 </answer>. {instruction}"""
-        elif template_type == 'qwen-instruct':
-            """This works for Qwen Instruct Models"""
-            prefix = f"""<|im_start|>system
-    You are a helpful AI Assistant that provides expert poker analysis. Your task is to analyze the poker situation and determine the optimal GTO decision. 1. First, conduct a step-by-step reasoning phase within <analyze> and </analyze> tags where you analyze the current game situation (e.g., board texture, positions, stack sizes, etc.). 2. Next, enter a planning phase inside <plan> and </plan> where you explore multiple potential strategies. During this phase, list possible actions without committing to a single decision. Highlight any uncertainties or multiple viable options. 3. If you require further knowledge to refine your planning, call a game theory calculation function inside <calculation> and </calculation>. These calculations can include, but are not limited to: - Range estimation for you and your opponents. - Detailed estimations of hand strengths. - Expected value calculations for different actions. - Mixed strategy considerations (since GTO may require playing the same hand in different ways with specific frequencies). - Application of the 4-2 Rule. 4. You may call the <calculation> function multiple times. After each calculation, return to the planning phase (<plan> ... </plan>) to reassess your options—either confirming your earlier considerations or revising them based on new insights. 5. Only once your iterative planning and calculation process has fully refined your decision should you provide your final action. Output your final decision in the following format: <answer> [Your final decision in the format: check/call/fold/bet X/raise X] </answer>. For bet or raise decisions, ensure that X is the only numerical value in your output, for example, <answer> raise 10 </answer> or <answer> bet 100 </answer>.<|im_end|>
-    <|im_start|>user
-    {instruction}<|im_end|>
-    <|im_start|>assistant"""
-        else:
-            # Default to raw instruction if template type not recognized
-            prefix = instruction
+    # def make_prefix(instruction, template_type):
+    #     """Create the appropriate prefix based on template type."""
+    #     if template_type == 'base':
+    #         """This works for any base model"""
+    #         prefix = f"""You are a helpful AI Assistant that provides expert poker analysis. First think about the reasoning process as an internal monologue, then provide the optimal GTO decision. Respond in the following format:\n<think>\n[Your step-by-step reasoning process. ]\n</think>\n<answer>\n[Your final decision in the format: check/call/fold/bet X/raise X]\n</answer>. {instruction}"""
+    #     elif template_type == 'plan_guided':
+    #         prefix = f"""You are a helpful AI Assistant that provides expert poker analysis. 
+    #                     Your task is to analyze the poker situation and determine the optimal GTO decision. 
+    #                     1. First, conduct a step-by-step reasoning phase within <analyze> and </analyze> tags where you analyze the current game situation (e.g., board texture, positions, stack sizes, etc.). 
+    #                     2. Next, enter a planning phase inside <plan> and </plan> where you explore multiple potential strategies. During this phase, list possible actions without committing to a single decision. Highlight any uncertainties or multiple viable options. 
+    #                     3. If you require further knowledge to refine your planning, call a game theory calculation function inside <calculation> and </calculation>. These calculations can include, but are not limited to: - Range estimation for you and your opponents. - Detailed estimations of hand strengths. - Expected value calculations for different actions. - Mixed strategy considerations (since GTO may require playing the same hand in different ways with specific frequencies). - Application of the 4-2 Rule. 
+    #                     4. You may call the <calculation> function multiple times. After each calculation, return to the planning phase (<plan> ... </plan>) to reassess your options—either confirming your earlier considerations or revising them based on new insights. 
+    #                     5. Only once your iterative planning and calculation process has fully refined your decision should you provide your final action. 
+    #                     Output your final decision in the following format: <answer> [Your final decision in the format: check/call/fold/bet X/raise X] </answer>. For bet or raise decisions, ensure that X is the only numerical value in your output, for example, <answer> raise 10 </answer> or <answer> bet 100 </answer>. {instruction}"""
+    #     elif template_type == 'qwen-instruct':
+    #         """This works for Qwen Instruct Models"""
+    #         prefix = f"""<|im_start|>system
+    # You are a helpful AI Assistant that provides expert poker analysis. Your task is to analyze the poker situation and determine the optimal GTO decision. 1. First, conduct a step-by-step reasoning phase within <analyze> and </analyze> tags where you analyze the current game situation (e.g., board texture, positions, stack sizes, etc.). 2. Next, enter a planning phase inside <plan> and </plan> where you explore multiple potential strategies. During this phase, list possible actions without committing to a single decision. Highlight any uncertainties or multiple viable options. 3. If you require further knowledge to refine your planning, call a game theory calculation function inside <calculation> and </calculation>. These calculations can include, but are not limited to: - Range estimation for you and your opponents. - Detailed estimations of hand strengths. - Expected value calculations for different actions. - Mixed strategy considerations (since GTO may require playing the same hand in different ways with specific frequencies). - Application of the 4-2 Rule. 4. You may call the <calculation> function multiple times. After each calculation, return to the planning phase (<plan> ... </plan>) to reassess your options—either confirming your earlier considerations or revising them based on new insights. 5. Only once your iterative planning and calculation process has fully refined your decision should you provide your final action. Output your final decision in the following format: <answer> [Your final decision in the format: check/call/fold/bet X/raise X] </answer>. For bet or raise decisions, ensure that X is the only numerical value in your output, for example, <answer> raise 10 </answer> or <answer> bet 100 </answer>.<|im_end|>
+    # <|im_start|>user
+    # {instruction}<|im_end|>
+    # <|im_start|>assistant"""
+    #     else:
+    #         # Default to raw instruction if template type not recognized
+    #         prefix = instruction
         
-        return prefix
+    #     return prefix
+
+    def make_system_prompt(template_type):
+        if template_type == 'plan':
+            return """You are a helpful AI Assistant that provides expert poker analysis. Your task is to analyze the poker situation and determine the optimal GTO decision. 1. First, conduct a step-by-step reasoning phase within <analyze> and </analyze> tags where you analyze the current game situation (e.g., board texture, positions, stack sizes, etc.). 2. Next, enter a planning phase inside <plan> and </plan> where you explore multiple potential strategies. During this phase, list possible actions without committing to a single decision. Highlight any uncertainties or multiple viable options. 3. If you require further knowledge to refine your planning, call a game theory calculation function inside <calculation> and </calculation>. These calculations can include, but are not limited to: - Range estimation for you and your opponents. - Detailed estimations of hand strengths. - Expected value calculations for different actions. - Mixed strategy considerations (since GTO may require playing the same hand in different ways with specific frequencies). - Application of the 4-2 Rule. 4. You may call the <calculation> function multiple times. After each calculation, return to the planning phase (<plan> ... </plan>) to reassess your options—either confirming your earlier considerations or revising them based on new insights. 5. Only once your iterative planning and calculation process has fully refined your decision should you provide your final action. Output your final decision in the following format: <answer> [Your final decision in the format: check/call/fold/bet X/raise X] </answer>. For bet or raise decisions, ensure that X is the only numerical value in your output, for example, <answer> raise 10 </answer> or <answer> bet 100 </answer>."""
+        elif template_type == 'no_plan':
+            return "You are a helpful AI Assistant that provides expert poker analysis. First think about the reasoning process as an internal monologue, then provide the optimal GTO decision. Respond in the following format:\n<think>\n[Your step-by-step reasoning process. ]\n</think>\n<answer>\n[Your final decision in the format: check/call/fold/bet X/raise X]\n</answer>."
+        else:
+            return ""
 
     def make_map_fn(split):
         def process_fn(example, idx):
             # Extract the instruction and output
             instruction = example['instruction']
-            formatted_instruction = make_prefix(instruction, template_type=args.template_type)
             ground_truth = example['output']
             
             # Create the data dict in the required format
             data = {
                 "data_source": data_source,
-                "prompt": [{
-                    "role": "user",
-                    "content": instruction,
-                }],
+                "prompt": [
+                    {
+                        "role": "system",
+                        "content": make_system_prompt(args.template_type),
+                    },
+                    {
+                        "role": "user",
+                        "content": instruction,
+                    }
+                ],
                 "ability": "decision_making",
                 "reward_model": {
                     "style": "rule",

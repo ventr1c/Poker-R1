@@ -50,7 +50,7 @@ def _normalize_poker_decision(decision):
         if sizing_match:
             action = sizing_match.group(1)
             size = sizing_match.group(2)
-            return f"{action} {size}bb"
+            return f"{action} {size}"
     
     # Return as-is if no normalization rules match
     return decision
@@ -77,7 +77,7 @@ def poker_gto_reward(solution_str, ground_truth, method, format_score, score):
     for content, gto_decision in zip(contents, ground_truths):
         try:
             # Extract the decision from the response (assuming it's in the <answer> section)
-            answer_pattern = r"<answer>\n(.*?)\n</answer>"
+            answer_pattern = r"<answer>\s*([\s\S]*?)\s*</answer>"
             answer_match = re.search(answer_pattern, content, re.DOTALL)
             
             if not answer_match:
@@ -105,13 +105,13 @@ def poker_gto_reward(solution_str, ground_truth, method, format_score, score):
                     if response_amount is not None and reference_amount is not None:
                         # Full reward for exact amount match
                         if abs(response_amount - reference_amount) < 2:  # Small epsilon for float comparison
-                            reward = 2.5
+                            reward = 1.5
                         else:
                             # Partial reward (0.5) when only action type matches
-                            reward = 1.5
+                            reward = 1.0
                     else:
                         # If we can't parse one of the amounts, give partial credit
-                        reward = 1
+                        reward = 0.5
                 else:
                     # Unknown action type
                     reward = 0.0
@@ -299,4 +299,5 @@ def compute_score(solution_str, ground_truth, method='strict', format_score=0.1,
     format_reward = poker_format_reward(solution_str)
     tag_count_reward = poker_tag_count_reward(solution_str)
     # return 1 * accuracy_reward + 0.5 * format_reward + 0.5 * tag_count_reward
+    # return accuracy_reward + 0 * format_reward + 0 * tag_count_reward
     return accuracy_reward

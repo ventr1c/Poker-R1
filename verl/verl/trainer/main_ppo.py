@@ -72,7 +72,7 @@ def get_custom_reward_fn(config):
     spec = importlib.util.spec_from_file_location("custom_module", file_path)
     module = importlib.util.module_from_spec(spec)
     try:
-        spec.loader.exec_module(module)
+        spec.loader.exec_module(module) 
     except Exception as e:
         raise RuntimeError(f"Error loading module from '{file_path}': {e}")
 
